@@ -1,5 +1,4 @@
-import React from "react"
-import PropTypes from "prop-types"
+import React, { PropTypes } from "react"
 
 //import "./topbar.less"
 import Logo from "./logo_small.png"
@@ -8,80 +7,26 @@ export default class Topbar extends React.Component {
 
   constructor(props, context) {
     super(props, context)
-    this.state = { url: props.specSelectors.url(), selectedIndex: 0 }
+    this.state = { url: props.specSelectors.url() }
   }
 
   componentWillReceiveProps(nextProps) {
     this.setState({ url: nextProps.specSelectors.url() })
   }
 
-  onUrlChange =(e)=> {
-    let {target: {value}} = e
-    this.setState({url: value})
-  }
-
-  loadSpec = (url) => {
-    this.props.specActions.updateUrl(url)
-    this.props.specActions.download(url)
-  }
-
-  onUrlSelect =(e)=> {
-    let url = e.target.value || e.target.href
-    this.loadSpec(url)
-    this.setSelectedUrl(url)
-    e.preventDefault()
+  onUrlChange = (e) => {
+    let { target: { value } } = e
+    this.setState({ url: value })
   }
 
   downloadUrl = (e) => {
-    this.loadSpec(this.state.url)
+    this.props.specActions.updateUrl(this.state.url)
+    this.props.specActions.download(this.state.url)
     e.preventDefault()
   }
 
-  setSelectedUrl = (selectedUrl) => {
-    const configs = this.props.getConfigs()
-    const urls = configs.urls || []
-
-    if(urls && urls.length) {
-      if(selectedUrl)
-      {
-        urls.forEach((spec, i) => {
-          if(spec.url === selectedUrl)
-            {
-              this.setState({selectedIndex: i})
-            }
-        })
-      }
-    }
-  }
-
-  componentWillMount() {
-    const configs = this.props.getConfigs()
-    const urls = configs.urls || []
-
-    if(urls && urls.length) {
-      let primaryName = configs["urls.primaryName"]
-      if(primaryName)
-      {
-        urls.forEach((spec, i) => {
-          if(spec.name === primaryName)
-            {
-              this.setState({selectedIndex: i})
-            }
-        })
-      }
-    }
-  }
-
-  componentDidMount() {
-    const urls = this.props.getConfigs().urls || []
-
-    if(urls && urls.length) {
-      this.loadSpec(urls[this.state.selectedIndex].url)
-    }
-  }
-
   render() {
-    let { getComponent, specSelectors, getConfigs } = this.props
+    let { getComponent, specSelectors } = this.props
     const Button = getComponent("Button")
     const Link = getComponent("Link")
 
@@ -89,47 +34,54 @@ export default class Topbar extends React.Component {
     let isFailed = specSelectors.loadingStatus() === "failed"
 
     let inputStyle = {}
-    if(isFailed) inputStyle.color = "red"
-    if(isLoading) inputStyle.color = "#aaa"
-
-    const { urls } = getConfigs()
-    let control = []
-    let formOnSubmit = null
-
-    if(urls) {
-      let rows = []
-      urls.forEach((link, i) => {
-        rows.push(<option key={i} value={link.url}>{link.name}</option>)
-      })
-
-      control.push(
-        <label className="select-label" htmlFor="select"><span>Select a spec</span>
-          <select id="select" disabled={isLoading} onChange={ this.onUrlSelect } value={urls[this.state.selectedIndex].url}>
-            {rows}
-          </select>
-        </label>
-      )
-    }
-    else {
-      formOnSubmit = this.downloadUrl
-      control.push(<input className="download-url-input" type="text" onChange={ this.onUrlChange } value={this.state.url} disabled={isLoading} style={inputStyle} />)
-      control.push(<Button className="download-url-button" onClick={ this.downloadUrl }>Explore</Button>)
-    }
-
+    if (isFailed) inputStyle.color = "red"
+    if (isLoading) inputStyle.color = "#aaa"
     return (
       <div className="topbar">
         <div className="wrapper">
           <div className="topbar-wrapper">
             <Link href="#" title="Swagger UX">
-              <img height="30" width="30" src={ Logo } alt="Swagger UX"/>
-              <span>swagger</span>
+              <img height="50" width="160" src={Logo} alt="Swagger UX" />
             </Link>
-            <form className="download-url-wrapper" onSubmit={formOnSubmit}>
-              {control}
+            <form className="download-url-wrapper" onSubmit={this.downloadUrl}>
+              <input className="download-url-input" type="text" onChange={this.onUrlChange} value={this.state.url} disabled={isLoading} style={inputStyle} />
+              <Button className="download-url-button" onClick={this.downloadUrl}>Explore</Button>
+              {/*<button className="btn unlocked generate-client-menu dropit" style={{margin: "11px 0px 0px 10px"}}><span>Generate Clients</span></button>*/}
             </form>
+            <div className="input">
+              <ul className="generate-client-menu dropit">
+                <li className="dropit-trigger"><a id="client" href="#" className="dropdown-trigger gen-btn">Generate Client ▾</a>
+                  <ul id="menu" className="dropit-submenu" style={{ display: "none" }}>
+                    <li><a href="swagger/clients/akka-scala">Akka Scala</a></li>
+                    <li><a href="swagger/clients/android">Android</a></li>
+                    <li><a href="swagger/clients/async-scala">Async Scala</a></li>
+                    <li><a href="swagger/clients/clojure">Clojure</a></li>
+                    <li><a href="swagger/clients/csharp">C#</a></li>
+                    <li><a href="swagger/clients/CsharpDotNet2">C# .NET 2.0</a></li>
+                    <li><a href="swagger/clients/dart">Dart</a></li>
+                    <li><a href="swagger/clients/flash">Flash</a></li>
+                    <li><a href="swagger/clients/go">Go</a></li>
+                    <li><a href="swagger/clients/java">Java</a></li>
+                    <li><a href="swagger/clients/javascript">Javascript</a></li>
+                    <li><a href="swagger/clients/javascript-closure-angular">Javascript Closure Angular</a></li>
+                    <li><a href="swagger/clients/jmeter">Jmeter</a></li>
+                    <li><a href="swagger/clients/objc">Objective-C</a></li>
+                    <li><a href="swagger/clients/perl">Perl</a></li>
+                    <li><a href="swagger/clients/php">PHP</a></li>
+                    <li><a href="swagger/clients/python">Python</a></li>
+                    <li><a href="swagger/clients/qt5cpp">Qt 5 C++</a></li>
+                    <li><a href="swagger/clients/ruby">Ruby</a></li>
+                    <li><a href="swagger/clients/scala">Scala</a></li>
+                    <li><a href="swagger/clients/swift">Swift</a></li>
+                    <li><a href="swagger/clients/tizen">Tizen</a></li>
+                    <li><a href="swagger/clients/typescript-angular">Typescript Angular</a></li>
+                    <li><a href="swagger/clients/typescript-node">Typescript Node</a></li></ul></li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
+
     )
   }
 }
@@ -137,6 +89,5 @@ export default class Topbar extends React.Component {
 Topbar.propTypes = {
   specSelectors: PropTypes.object.isRequired,
   specActions: PropTypes.object.isRequired,
-  getComponent: PropTypes.func.isRequired,
-  getConfigs: PropTypes.func.isRequired
+  getComponent: PropTypes.func.isRequired
 }
