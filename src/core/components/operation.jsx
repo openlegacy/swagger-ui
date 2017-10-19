@@ -28,6 +28,7 @@ export default class Operation extends PureComponent {
     authSelectors: PropTypes.object,
     specActions: PropTypes.object.isRequired,
     specSelectors: PropTypes.object.isRequired,
+    oas3Actions: PropTypes.object.isRequired,
     layoutActions: PropTypes.object.isRequired,
     layoutSelectors: PropTypes.object.isRequired,
     fn: PropTypes.object.isRequired,
@@ -116,7 +117,9 @@ export default class Operation extends PureComponent {
       specActions,
       specSelectors,
       authActions,
-      authSelectors
+      authSelectors,
+      getConfigs,
+      oas3Actions
     } = this.props
 
     let summary = operation.get("summary")
@@ -141,8 +144,12 @@ export default class Operation extends PureComponent {
     const Markdown = getComponent( "Markdown" )
     const Schemes = getComponent( "schemes" )
 
+    const { deepLinking } = getConfigs()
+
+    const isDeepLinkingEnabled = deepLinking && deepLinking !== "false"
+
     // Merge in Live Response
-    if(response && response.size > 0) {
+    if(responses && response && response.size > 0) {
       let notDocumented = !responses.get(String(response.get("status")))
       response = response.set("notDocumented", notDocumented)
     }
@@ -152,13 +159,18 @@ export default class Operation extends PureComponent {
     let onChangeKey = [ path, method ] // Used to add values to _this_ operation ( indexed by path and method )
 
     return (
-        <div className={deprecated ? "opblock opblock-deprecated" : shown ? `opblock opblock-${method} is-open` : `opblock opblock-${method}`} id={isShownKey} >
+        <div className={deprecated ? "opblock opblock-deprecated" : shown ? `opblock opblock-${method} is-open` : `opblock opblock-${method}`} id={isShownKey.join("-")} >
           <div className={`opblock-summary opblock-summary-${method}`} onClick={this.toggleShown} >
-            <span className="opblock-summary-method">{method.toUpperCase()}</span>
-            <span className={ deprecated ? "opblock-summary-path__deprecated" : "opblock-summary-path" } >
-              <span>{path}</span>
-              <JumpToPath path={jumpToKey} />
-            </span>
+              <span className="opblock-summary-method">{method.toUpperCase()}</span>
+              <span className={ deprecated ? "opblock-summary-path__deprecated" : "opblock-summary-path" } >
+              <a
+                className="nostyle"
+                onClick={isDeepLinkingEnabled ? (e) => e.preventDefault() : null}
+                href={isDeepLinkingEnabled ? `#/${isShownKey[1]}/${isShownKey[2]}` : null}>
+                <span>{path}</span>
+              </a>
+                <JumpToPath path={jumpToKey} />
+              </span>
 
             { !showSummary ? null :
                 <div className="opblock-summary-description">
@@ -176,7 +188,7 @@ export default class Operation extends PureComponent {
             }
           </div>
 
-          <Collapse isOpened={shown} animated>
+          <Collapse isOpened={shown}>
             <div className="opblock-body">
               { deprecated && <h4 className="opblock-title_normal"> Warning: Deprecated</h4>}
               { description &&
@@ -191,13 +203,16 @@ export default class Operation extends PureComponent {
                 <div className="opblock-external-docs-wrapper">
                   <h4 className="opblock-title_normal">Find more details</h4>
                   <div className="opblock-external-docs">
-                    <span className="opblock-external-docs__description">{ externalDocs.get("description") }</span>
+                    <span className="opblock-external-docs__description">
+                      <Markdown source={ externalDocs.get("description") } />
+                    </span>
                     <a className="opblock-external-docs__link" href={ externalDocs.get("url") }>{ externalDocs.get("url") }</a>
                   </div>
                 </div> : null
               }
               <Parameters
                 parameters={parameters}
+                operation={operation}
                 onChangeKey={onChangeKey}
                 onTryoutClick = { this.onTryoutClick }
                 onCancelClick = { this.onCancelClick }
@@ -209,6 +224,7 @@ export default class Operation extends PureComponent {
                 specActions={ specActions }
                 specSelectors={ specSelectors }
                 pathMethod={ [path, method] }
+                getConfigs={ getConfigs }
               />
 
               {!tryItOutEnabled || !allowTryItOut ? null : schemes && schemes.size ? <div className="opblock-schemes">
@@ -216,7 +232,7 @@ export default class Operation extends PureComponent {
                              path={ path }
                              method={ method }
                              specActions={ specActions }
-                             operationScheme={ operationScheme } />
+                             currentScheme={ operationScheme } />
                   </div> : null
               }
 
@@ -250,7 +266,9 @@ export default class Operation extends PureComponent {
                     request={ request }
                     tryItOutResponse={ response }
                     getComponent={ getComponent }
+                    getConfigs={ getConfigs }
                     specSelectors={ specSelectors }
+                    oas3Actions={oas3Actions}
                     specActions={ specActions }
                     produces={ produces }
                     producesValue={ operation.get("produces_value") }

@@ -13,10 +13,10 @@ export default class Models extends Component {
   render(){
     let { specSelectors, getComponent, layoutSelectors, layoutActions, getConfigs } = this.props
     let definitions = specSelectors.definitions()
-    let { docExpansion } = getConfigs()
+    let { docExpansion, defaultModelExpandDepth } = getConfigs()
     let showModels = layoutSelectors.isShown("models", docExpansion === "full" || docExpansion === "list" )
 
-    const Model = getComponent("model")
+    const ModelWrapper = getComponent("ModelWrapper")
     const Collapse = getComponent("Collapse")
 
     if (!definitions.size) return null
@@ -24,17 +24,17 @@ export default class Models extends Component {
     return <section className={ showModels ? "models is-open" : "models"}>
       <h4 onClick={() => layoutActions.show("models", !showModels)}>
         <span>Models</span>
-        <svg className="arrow" width="20" height="20">
+        <svg width="20" height="20">
           <use xlinkHref={showModels ? "#large-arrow-down" : "#large-arrow"} />
         </svg>
       </h4>
-      <Collapse isOpened={showModels} animated>
+      <Collapse isOpened={showModels}>
         {
           definitions.entrySeq().map( ( [ name, model ])=>{
             return <div className="model-container" key={ `models-section-${name}` }>
-              <Model name={ name }
+              <ModelWrapper name={ name }
+                     expandDepth={ defaultModelExpandDepth }
                      schema={ model }
-                     isRef={ true }
                      getComponent={ getComponent }
                      specSelectors={ specSelectors }/>
               </div>

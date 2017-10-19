@@ -14,5 +14,7 @@
     @import 'information';
     @import 'authorize';
     @import 'errors';
+    @include text_body();
+    @import 'split-pane-mode';
     @import '_olSwagger';
 }
