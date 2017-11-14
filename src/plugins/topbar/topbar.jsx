@@ -1,4 +1,4 @@
-import React from "react"
+import React, { cloneElement } from "react"
 import PropTypes from "prop-types"
 
 //import "./topbar.less"
@@ -129,13 +129,11 @@ export default class Topbar extends React.Component {
       <div className="topbar">
         <div className="wrapper">
           <div className="topbar-wrapper">
-            <Link href="#" title="Swagger UX">
-              <img height="50" width="160" src={Logo} alt="Swagger UI" />
+            <Link href="#">
+              <img height="90%" width="90%" src={ Logo } alt="Swagger UI"/>
             </Link>
-            <form className="download-url-wrapper" onSubmit={this.downloadUrl}>
-              <input className="download-url-input" type="text" onChange={this.onUrlChange} value={this.state.url} disabled={isLoading} style={inputStyle} />
-              <Button className="download-url-button" onClick={this.downloadUrl}>Explore</Button>
-              {/*<button className="btn unlocked generate-client-menu dropit" style={{margin: "11px 0px 0px 10px"}}><span>Generate Clients</span></button>*/}
+            <form className="download-url-wrapper" onSubmit={formOnSubmit}>
+              {control.map((el, i) => cloneElement(el, { key: i }))}
             </form>
             <div className="input">
               <ul className="generate-client-menu dropit">
