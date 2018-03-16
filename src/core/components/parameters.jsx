@@ -20,7 +20,8 @@ export default class Parameters extends Component {
     onCancelClick: PropTypes.func,
     onChangeKey: PropTypes.array,
     pathMethod: PropTypes.array.isRequired,
-    getConfigs: PropTypes.func.isRequired
+    getConfigs: PropTypes.func.isRequired,
+    specPath: ImPropTypes.list.isRequired,
   }
 
 
@@ -30,6 +31,7 @@ export default class Parameters extends Component {
     tryItOutEnabled: false,
     allowTryItOut: true,
     onChangeKey: [],
+    specPath: [],
   }
 
   onChange = ( param, value, isXml ) => {
@@ -58,6 +60,7 @@ export default class Parameters extends Component {
       parameters,
       allowTryItOut,
       tryItOutEnabled,
+      specPath,
 
       fn,
       getComponent,
@@ -92,11 +95,13 @@ export default class Parameters extends Component {
               </thead>
               <tbody>
                 {
-                  eachMap(parameters, (parameter) => (
-                    <ParameterRow fn={ fn }
+                  eachMap(parameters, (parameter, i) => (
+                    <ParameterRow
+                      fn={ fn }
+                      specPath={specPath.push(i.toString())}
                       getComponent={ getComponent }
                       getConfigs={ getConfigs }
-                      param={ parameter }
+                      param={ specSelectors.parameterWithMeta(pathMethod, parameter.get("name"), parameter.get("in")) }
                       key={ `${parameter.get( "in" )}.${parameter.get("name")}` }
                       onChange={ this.onChange }
                       onChangeConsumes={this.onChangeConsumesWrapper}

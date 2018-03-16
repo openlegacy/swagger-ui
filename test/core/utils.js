@@ -3,6 +3,8 @@ import expect from "expect"
 import { fromJS, OrderedMap } from "immutable"
 import {
   mapToList,
+  parseSearch,
+  serializeSearch,
   validatePattern,
   validateMinLength,
   validateMaxLength,
@@ -18,7 +20,8 @@ import {
   getAcceptControllingResponse,
   createDeepLinkPath,
   escapeDeepLinkPath,
-  sanitizeUrl
+  sanitizeUrl,
+  extractFileNameFromContentDispositionHeader
 } from "core/utils"
 import win from "core/window"
 
@@ -88,6 +91,26 @@ describe("utils", function() {
       expect(aList.toJS()).toEqual([])
     })
 
+  })
+
+  describe("extractFileNameFromContentDispositionHeader", function(){
+    it("should extract quoted filename", function(){
+      let cdHeader = "attachment; filename=\"file name.jpg\""
+      let expectedResult = "file name.jpg"
+      expect(extractFileNameFromContentDispositionHeader(cdHeader)).toEqual(expectedResult)
+    })
+
+    it("should extract filename", function(){
+      let cdHeader = "attachment; filename=filename.jpg"
+      let expectedResult = "filename.jpg"
+      expect(extractFileNameFromContentDispositionHeader(cdHeader)).toEqual(expectedResult)
+    })
+
+    it("should not extract filename and return null", function(){
+      let cdHeader = "attachment; no file name provided"
+      let expectedResult = null
+      expect(extractFileNameFromContentDispositionHeader(cdHeader)).toEqual(expectedResult)
+    })
   })
 
   describe("validateMaximum", function() {
@@ -238,6 +261,10 @@ describe("utils", function() {
     it("doesn't return for valid guid", function() {
       expect(validateGuid("8ce4811e-cec5-4a29-891a-15d1917153c1")).toBeFalsy()
       expect(validateGuid("{8ce4811e-cec5-4a29-891a-15d1917153c1}")).toBeFalsy()
+      expect(validateGuid("8CE4811E-CEC5-4A29-891A-15D1917153C1")).toBeFalsy()
+      expect(validateGuid("6ffefd8e-a018-e811-bbf9-60f67727d806")).toBeFalsy()
+      expect(validateGuid("6FFEFD8E-A018-E811-BBF9-60F67727D806")).toBeFalsy()
+      expect(validateGuid("00000000-0000-0000-0000-000000000000")).toBeFalsy()
     })
 
     it("returns a message for invalid input'", function() {
@@ -321,14 +348,11 @@ describe("utils", function() {
     }
 
     it("should check the isOAS3 flag when validating parameters", function() {
-      // This should "skip" validation because there is no `schema.type` property
+      // This should "skip" validation because there is no `schema` property
       // and we are telling `validateParam` this is an OAS3 spec
       param = fromJS({
         value: "",
-        required: true,
-        schema: {
-          notTheTypeProperty: "string"
-        }
+        required: true
       })
       result = validateParam( param, false, true )
       expect( result ).toEqual( [] )
@@ -915,6 +939,48 @@ describe("utils", function() {
     it("escapes a deep link path with an id selector", function() {
       const result = escapeDeepLinkPath("hello#world")
       expect(result).toEqual("hello\\#world")
+    })
+  })
+
+  describe("parse and serialize search", function() {
+    afterEach(function() {
+      win.location.search = ""
+    })
+
+    describe("parsing", function() {
+      it("works with empty search", function() {
+        win.location.search = ""
+        expect(parseSearch()).toEqual({})
+      })
+
+      it("works with only one key", function() {
+        win.location.search = "?foo"
+        expect(parseSearch()).toEqual({foo: ""})
+      })
+
+      it("works with keys and values", function() {
+        win.location.search = "?foo=fooval&bar&baz=bazval"
+        expect(parseSearch()).toEqual({foo: "fooval", bar: "", baz: "bazval"})
+      })
+
+      it("decode url encoded components", function() {
+        win.location.search = "?foo=foo%20bar"
+        expect(parseSearch()).toEqual({foo: "foo bar"})
+      })
+    })
+
+    describe("serializing", function() {
+      it("works with empty map", function() {
+        expect(serializeSearch({})).toEqual("")
+      })
+
+      it("works with multiple keys with and without values", function() {
+        expect(serializeSearch({foo: "", bar: "barval"})).toEqual("foo=&bar=barval")
+      })
+
+      it("encode url components", function() {
+        expect(serializeSearch({foo: "foo bar"})).toEqual("foo=foo%20bar")
+      })
     })
   })
 

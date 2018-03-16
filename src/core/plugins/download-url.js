@@ -26,11 +26,13 @@ export default function downloadUrlPlugin (toolbox) {
       function next(res) {
         if(res instanceof Error || res.status >= 400) {
           specActions.updateLoadingStatus("failed")
-          return errActions.newThrownErr( new Error(res.statusText + " " + url) )
+          return errActions.newThrownErr( new Error((res.message || res.statusText) + " " + url) )
         }
         specActions.updateLoadingStatus("success")
         specActions.updateSpec(res.text)
-        specActions.updateUrl(url)
+        if(specSelectors.url() !== url) {
+          specActions.updateUrl(url)
+        }
       }
 
     },

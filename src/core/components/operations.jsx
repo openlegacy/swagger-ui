@@ -1,8 +1,14 @@
 import React from "react"
 import PropTypes from "prop-types"
-import { helpers } from "swagger-client"
+import Im from "immutable"
 import { createDeepLinkPath, sanitizeUrl } from "core/utils"
-const { opId } = helpers
+
+const SWAGGER2_OPERATION_METHODS = [
+  "get", "put", "post", "delete", "options", "head", "patch"
+]
+
+const OAS3_OPERATION_METHODS = SWAGGER2_OPERATION_METHODS.concat(["trace"])
+
 
 export default class Operations extends React.Component {
 
@@ -15,34 +21,29 @@ export default class Operations extends React.Component {
     layoutActions: PropTypes.object.isRequired,
     authActions: PropTypes.object.isRequired,
     authSelectors: PropTypes.object.isRequired,
-    getConfigs: PropTypes.func.isRequired
+    getConfigs: PropTypes.func.isRequired,
+    fn: PropTypes.func.isRequired
   };
 
   render() {
     let {
       specSelectors,
-      specActions,
-      oas3Actions,
       getComponent,
       layoutSelectors,
       layoutActions,
-      authActions,
-      authSelectors,
       getConfigs,
       fn
     } = this.props
 
     let taggedOps = specSelectors.taggedOperations()
 
-    const Operation = getComponent("operation")
+    const OperationContainer = getComponent("OperationContainer", true)
     const Collapse = getComponent("Collapse")
     const Markdown = getComponent("Markdown")
+    const DeepLink = getComponent("DeepLink")
 
-    let showSummary = layoutSelectors.showSummary()
     let {
       docExpansion,
-      displayOperationId,
-      displayRequestDuration,
       maxDisplayedTags,
       deepLinking
     } = getConfigs()
@@ -53,9 +54,7 @@ export default class Operations extends React.Component {
 
     if (filter) {
       if (filter !== true) {
-        taggedOps = taggedOps.filter((tagObj, tag) => {
-          return tag.indexOf(filter) !== -1
-        })
+        taggedOps = fn.opsFilter(taggedOps, filter)
       }
     }
 
@@ -82,13 +81,12 @@ export default class Operations extends React.Component {
                     onClick={() => layoutActions.show(isShownKey, !showTag)}
                     className={!tagDescription ? "opblock-tag no-desc" : "opblock-tag" }
                     id={isShownKey.join("-")}>
-                    <a
-                      className="nostyle"
-                      onClick={isDeepLinkingEnabled ? (e) => e.preventDefault() : null}
-                      href= {isDeepLinkingEnabled ? `#/${tag}` : null}>
-                      <span>{tag}</span>
-                    </a>
-                    { !tagDescription ? null :
+                    <DeepLink
+                        enabled={isDeepLinkingEnabled}
+                        isShown={showTag}
+                        path={tag}
+                        text={tag} />
+                    { !tagDescription ? <small></small> :
                         <small>
                           <Markdown source={tagDescription} />
                         </small>
@@ -110,7 +108,7 @@ export default class Operations extends React.Component {
                     }
                     </div>
 
-                    <button className="expand-operation" title="Expand operation" onClick={() => layoutActions.show(isShownKey, !showTag)}>
+                    <button className="expand-operation" title={showTag ? "Collapse operation": "Expand operation"} onClick={() => layoutActions.show(isShownKey, !showTag)}>
                       <svg className="arrow" width="20" height="20">
                         <use href={showTag ? "#large-arrow-down" : "#large-arrow"} xlinkHref={showTag ? "#large-arrow-down" : "#large-arrow"} />
                       </svg>
@@ -120,49 +118,30 @@ export default class Operations extends React.Component {
                   <Collapse isOpened={showTag}>
                     {
                       operations.map( op => {
+                        const path = op.get("path")
+                        const method = op.get("method")
+                        const specPath = Im.List(["paths", path, method])
 
-                        const path = op.get("path", "")
-                        const method = op.get("method", "")
-                        const jumpToKey = `paths.${path}.${method}`
 
-                        const operationId =
-                        op.getIn(["operation", "operationId"]) || op.getIn(["operation", "__originalOperationId"]) || opId(op.get("operation"), path, method) || op.get("id")
-                        const tagKey = createDeepLinkPath(tag)
-                        const operationKey = createDeepLinkPath(operationId)
+                        // FIXME: (someday) this logic should probably be in a selector,
+                        // but doing so would require further opening up
+                        // selectors to the plugin system, to allow for dynamic
+                        // overriding of low-level selectors that other selectors
+                        // rely on. --KS, 12/17
+                        const validMethods = specSelectors.isOAS3() ?
+                          OAS3_OPERATION_METHODS : SWAGGER2_OPERATION_METHODS
 
-                        const allowTryItOut = specSelectors.allowTryItOutFor(op.get("path"), op.get("method"))
-                        const response = specSelectors.responseFor(op.get("path"), op.get("method"))
-                        const request = specSelectors.requestFor(op.get("path"), op.get("method"))
+                        if(validMethods.indexOf(method) === -1) {
+                          return null
+                        }
 
-                        return <Operation
-                          {...op.toObject()}
-                          tagKey={tagKey}
-                          operationKey={operationKey}
-                          isShown={layoutSelectors.isShown(["operations", tagKey, operationKey], docExpansion === "full")}
-                          jumpToKey={jumpToKey}
-                          showSummary={showSummary}
-                          key={tagKey + operationKey}
-                          response={ response }
-                          request={ request }
-                          allowTryItOut={allowTryItOut}
-
-                          displayOperationId={displayOperationId}
-                          displayRequestDuration={displayRequestDuration}
-
-                          specActions={ specActions }
-                          specSelectors={ specSelectors }
-
-                          oas3Actions={oas3Actions}
-
-                          layoutActions={ layoutActions }
-                          layoutSelectors={ layoutSelectors }
-
-                          authActions={ authActions }
-                          authSelectors={ authSelectors }
-
-                          getComponent={ getComponent }
-                          fn={fn}
-                          getConfigs={ getConfigs }
+                        return <OperationContainer
+                          key={`${path}-${method}`}
+                          specPath={specPath}
+                          op={op}
+                          path={path}
+                          method={method}
+                          tag={tag}
                         />
                       }).toArray()
                     }

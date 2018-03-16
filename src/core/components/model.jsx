@@ -1,16 +1,20 @@
-import React, { PureComponent } from "react"
+import React from "react"
+import ImmutablePureComponent from "react-immutable-pure-component"
+import ImPropTypes from "react-immutable-proptypes"
 import PropTypes from "prop-types"
 
-export default class Model extends PureComponent {
+export default class Model extends ImmutablePureComponent {
   static propTypes = {
-    schema: PropTypes.object.isRequired,
+    schema: ImPropTypes.orderedMap.isRequired,
     getComponent: PropTypes.func.isRequired,
+    getConfigs: PropTypes.func.isRequired,
     specSelectors: PropTypes.object.isRequired,
     name: PropTypes.string,
     isRef: PropTypes.bool,
     required: PropTypes.bool,
     expandDepth: PropTypes.number,
-    depth: PropTypes.number
+    depth: PropTypes.number,
+    specPath: ImPropTypes.list.isRequired,
   }
 
   getModelName =( ref )=> {
@@ -29,7 +33,7 @@ export default class Model extends PureComponent {
   }
 
   render () {
-    let { getComponent, specSelectors, schema, required, name, isRef } = this.props
+    let { getComponent, getConfigs, specSelectors, schema, required, name, isRef, specPath } = this.props
     const ObjectModel = getComponent("ObjectModel")
     const ArrayModel = getComponent("ArrayModel")
     const PrimitiveModel = getComponent("PrimitiveModel")
@@ -45,6 +49,17 @@ export default class Model extends PureComponent {
       schema = this.getRefSchema( name )
     }
 
+    if(!schema) {
+      return <span className="model model-title">
+              <span className="model-title__text">{ name }</span>
+              <img src={require("core/../img/rolling-load.svg")} height={"20px"} width={"20px"} style={{
+                  marginLeft: "1em",
+                  position: "relative",
+                  bottom: "0px"
+                }} />
+            </span>
+    }
+
     const deprecated = specSelectors.isOAS3() && schema.get("deprecated")
     isRef = isRef !== undefined ? isRef : !!$$ref
     type = schema && schema.get("type") || type
@@ -53,6 +68,8 @@ export default class Model extends PureComponent {
       case "object":
         return <ObjectModel
           className="object" { ...this.props }
+          specPath={specPath}
+          getConfigs={ getConfigs }
           schema={ schema }
           name={ name }
           deprecated={deprecated}
@@ -60,6 +77,7 @@ export default class Model extends PureComponent {
       case "array":
         return <ArrayModel
           className="array" { ...this.props }
+          getConfigs={ getConfigs }
           schema={ schema }
           name={ name }
           deprecated={deprecated}
@@ -72,6 +90,7 @@ export default class Model extends PureComponent {
         return <PrimitiveModel
           { ...this.props }
           getComponent={ getComponent }
+          getConfigs={ getConfigs }
           schema={ schema }
           name={ name }
           deprecated={deprecated}

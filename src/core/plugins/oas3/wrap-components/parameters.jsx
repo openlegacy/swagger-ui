@@ -29,6 +29,7 @@ class Parameters extends Component {
     fn: PropTypes.object.isRequired,
     tryItOutEnabled: PropTypes.bool,
     allowTryItOut: PropTypes.bool,
+    specPath: ImPropTypes.list.isRequired,
     onTryoutClick: PropTypes.func,
     onCancelClick: PropTypes.func,
     onChangeKey: PropTypes.array,
@@ -92,6 +93,7 @@ class Parameters extends Component {
       oas3Actions,
       oas3Selectors,
       pathMethod,
+      specPath,
       operation
     } = this.props
 
@@ -105,6 +107,8 @@ class Parameters extends Component {
     const { isOAS3 } = specSelectors
 
     const requestBody = operation.get("requestBody")
+    const requestBodySpecPath = specPath.slice(0, -1).push("requestBody") // remove the "parameters" part
+
     return (
       <div className="opblock-section">
         <div className="opblock-section-header">
@@ -136,9 +140,10 @@ class Parameters extends Component {
                 </thead>
                 <tbody>
                   {
-                    eachMap(parameters, (parameter) => (
+                    eachMap(parameters, (parameter, i) => (
                       <ParameterRow fn={ fn }
                         getComponent={ getComponent }
+                        specPath={specPath.push(i)}
                         getConfigs={ getConfigs }
                         param={ parameter }
                         key={ parameter.get( "name" ) }
@@ -156,7 +161,10 @@ class Parameters extends Component {
         </div> : "" }
 
         {this.state.callbackVisible ? <div className="callbacks-container opblock-description-wrapper">
-          <Callbacks callbacks={Map(operation.get("callbacks"))} />
+          <Callbacks
+            callbacks={Map(operation.get("callbacks"))}
+            specPath={specPath.slice(0, -1).push("callbacks")}
+          />
         </div> : "" }
         {
           isOAS3() && requestBody && this.state.parametersVisible &&
@@ -175,6 +183,7 @@ class Parameters extends Component {
             </div>
             <div className="opblock-description-wrapper">
               <RequestBody
+                specPath={requestBodySpecPath}
                 requestBody={requestBody}
                 isExecute={isExecute}
                 onChange={(value) => {

@@ -12,6 +12,10 @@
         {
             color: $model-deprecated-font-color !important;
         }
+
+        > td:first-of-type {
+            text-decoration: line-through;
+        }
     }
     &-toggle
     {
@@ -194,6 +198,7 @@ section.models
 .model-box
 {
     padding: 10px;
+    display: inline-block;
 
     border-radius: 4px;
     background: rgba($section-models-model-box-background-color,.1);

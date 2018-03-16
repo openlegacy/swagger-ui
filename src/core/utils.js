@@ -126,15 +126,6 @@ export function systemThunkMiddleware(getSystem) {
   }
 }
 
-export const errorLog = getSystem => () => next => action => {
-  try{
-    next( action )
-  }
-  catch( e ) {
-    getSystem().errActions.newThrownErr( e, action )
-  }
-}
-
 export function defaultStatusCode ( responses ) {
   let codes = responses.keySeq()
   return codes.contains(DEFAULT_REPONSE_KEY) ? DEFAULT_REPONSE_KEY : codes.filter( key => (key+"")[0] === "2").sort().first()
@@ -351,6 +342,17 @@ export function mapToList(map, keyNames="key", collectedKeys=Im.Map()) {
   return list
 }
 
+export function extractFileNameFromContentDispositionHeader(value){
+  let responseFilename = /filename="([^;]*);?"/i.exec(value)
+  if (responseFilename === null) {
+    responseFilename = /filename=([^;]*);?/i.exec(value)
+  }
+  if (responseFilename !== null && responseFilename.length > 1) {
+    return responseFilename[1]
+  }
+  return null
+}
+
 // PascalCase, aka UpperCamelCase
 export function pascalCase(str) {
   return upperFirst(camelCase(str))
@@ -442,7 +444,8 @@ export const validateDateTime = (val) => {
 }
 
 export const validateGuid = (val) => {
-    if (!/^[{(]?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}[)}]?$/.test(val)) {
+    val = val.toString().toLowerCase()
+    if (!/^[{(]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[)}]?$/.test(val)) {
         return "Value must be a Guid"
     }
 }
@@ -473,6 +476,9 @@ export const validateParam = (param, isXml, isOAS3 = false) => {
   let required = param.get("required")
 
   let paramDetails = isOAS3 ? param.get("schema") : param
+
+  if(!paramDetails) return errors
+
   let maximum = paramDetails.get("maximum")
   let minimum = paramDetails.get("minimum")
   let type = paramDetails.get("type")
@@ -480,7 +486,7 @@ export const validateParam = (param, isXml, isOAS3 = false) => {
   let maxLength = paramDetails.get("maxLength")
   let minLength = paramDetails.get("minLength")
   let pattern = paramDetails.get("pattern")
-  
+
 
   /*
     If the parameter is required OR the parameter has a value (meaning optional, but filled in)
@@ -506,7 +512,7 @@ export const validateParam = (param, isXml, isOAS3 = false) => {
       let err = validatePattern(value, pattern)
       if (err) errors.push(err)
     }
-    
+
     if (maxLength || maxLength === 0) {
       let err = validateMaxLength(value, maxLength)
       if (err) errors.push(err)
@@ -553,7 +559,7 @@ export const validateParam = (param, isXml, isOAS3 = false) => {
     } else if ( type === "array" ) {
       let itemType
 
-      if ( !value.count() ) { return errors }
+      if ( !listCheck || !value.count() ) { return errors }
 
       itemType = paramDetails.getIn(["items", "type"])
 
@@ -604,18 +610,30 @@ export const getSampleSchema = (schema, contentType="", config={}) => {
 
 export const parseSearch = () => {
   let map = {}
-  let search = window.location.search
+  let search = win.location.search
+
+  if(!search)
+    return {}
 
   if ( search != "" ) {
     let params = search.substr(1).split("&")
 
     for (let i in params) {
+      if (!params.hasOwnProperty(i)) {
+        continue
+      }
       i = params[i].split("=")
-      map[decodeURIComponent(i[0])] = decodeURIComponent(i[1])
+      map[decodeURIComponent(i[0])] = (i[1] && decodeURIComponent(i[1])) || ""
     }
   }
 
   return map
+}
+
+export const serializeSearch = (searchMap) => {
+  return Object.keys(searchMap).map(k => {
+    return encodeURIComponent(k) + "=" + encodeURIComponent(searchMap[k])
+  }).join("&")
 }
 
 export const btoa = (str) => {
@@ -692,3 +710,5 @@ export function getAcceptControllingResponse(responses) {
 
 export const createDeepLinkPath = (str) => typeof str == "string" || str instanceof String ? str.trim().replace(/\s/g, "_") : ""
 export const escapeDeepLinkPath = (str) => cssEscape( createDeepLinkPath(str) )
+
+export const getExtensions = (defObj) => defObj.filter((v, k) => /^x-/.test(k))

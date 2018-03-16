@@ -3,12 +3,12 @@ import deepExtend from "deep-extend"
 import System from "core/system"
 import win from "core/window"
 import ApisPreset from "core/presets/apis"
+
 import * as AllPlugins from "core/plugins/all"
 import { parseSearch } from "core/utils"
 
-if (process.env.NODE_ENV !== "production") {
-  const Perf = require("react-addons-perf")
-  window.Perf = Perf
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+  win.Perf = require("react-addons-perf")
 }
 
 // eslint-disable-next-line no-undef
@@ -47,6 +47,18 @@ module.exports = function SwaggerUI(opts) {
     showMutatedRequest: true,
     defaultModelRendering: "example",
     defaultModelExpandDepth: 1,
+    defaultModelsExpandDepth: 1,
+    showExtensions: false,
+    supportedSubmitMethods: [
+      "get",
+      "put",
+      "post",
+      "delete",
+      "options",
+      "head",
+      "patch",
+      "trace"
+    ],
 
     // Initial set of plugins ( TODO rename this, or refactor - we don't need presets _and_ plugins. Its just there for performance.
     // Instead, we can compile the first plugin ( it can be a collection of plugins ), then batch the rest.
@@ -90,6 +102,20 @@ module.exports = function SwaggerUI(opts) {
     }, constructorConfig.initialState)
   }
 
+  if(constructorConfig.initialState) {
+    // if the user sets a key as `undefined`, that signals to us that we
+    // should delete the key entirely.
+    // known usage: Swagger-Editor validate plugin tests
+    for (var key in constructorConfig.initialState) {
+      if(
+        constructorConfig.initialState.hasOwnProperty(key)
+        && constructorConfig.initialState[key] === undefined
+      ) {
+        delete storeConfigs.state[key]
+      }
+    }
+  }
+
   let inlinePlugin = ()=> {
     return {
       fn: constructorConfig.fn,
@@ -102,8 +128,6 @@ module.exports = function SwaggerUI(opts) {
   store.register([constructorConfig.plugins, inlinePlugin])
 
   var system = store.getSystem()
-
-  system.initOAuth = system.authActions.configureAuth
 
   const downloadSpec = (fetchedConfig) => {
     if(typeof constructorConfig !== "object") {
@@ -136,6 +160,9 @@ module.exports = function SwaggerUI(opts) {
     } else if(mergedConfig.dom_id) {
       let domNode = document.querySelector(mergedConfig.dom_id)
       system.render(domNode, "App")
+    } else if(mergedConfig.dom_id === null || mergedConfig.domNode === null) {
+      // do nothing
+      // this is useful for testing that does not need to do any rendering
     } else {
       console.error("Skipped rendering: no `dom_id` or `domNode` was specified")
     }
