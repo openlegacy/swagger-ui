@@ -163,7 +163,13 @@ export const authorizeRequest = ( data ) => ( { fn, getConfigs, authActions, err
     responseInterceptor: getConfigs().responseInterceptor
   })
   .then(function (response) {
-    let token = JSON.parse(response.data)
+    let data = response.data
+    if (response.data instanceof Blob) {
+      const reader = new FileReader()
+      reader.readAsText(response.data)
+      data = reader.result
+    }
+    let token = JSON.parse(data)
     let error = token && ( token.error || "" )
     let parseError = token && ( token.parseError || "" )
 
