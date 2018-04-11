@@ -164,36 +164,48 @@ export const authorizeRequest = ( data ) => ( { fn, getConfigs, authActions, err
   })
   .then(function (response) {
     let data = response.data
+
+    function authorize(data) {
+    	// wait for Reader.load if Edge
+		setTimeout(function() {
+			let token = JSON.parse(data)
+		    let error = token && ( token.error || "" )
+		    let parseError = token && ( token.parseError || "" )
+
+		    if ( !response.ok ) {
+		      errActions.newAuthErr( {
+		        authId: name,
+		        level: "error",
+		        source: "auth",
+		        message: response.statusText
+		      } )
+		      return
+		    }
+
+		    if ( error || parseError ) {
+		      errActions.newAuthErr({
+		        authId: name,
+		        level: "error",
+		        source: "auth",
+		        message: JSON.stringify(token)
+		      })
+		      return
+		    }
+
+		    authActions.authorizeOauth2({ auth, token})
+		}, 0)
+	}
+
     if (response.data instanceof Blob) {
-      const reader = new FileReader()
-      reader.readAsText(response.data)
-      data = reader.result
+		const reader = new FileReader();
+		reader.onload = function(e) {
+			// authorize in Microsoft Edge - Blob type
+			authorize(e.target.result);
+		}
+      	reader.readAsText(response.data)
     }
-    let token = JSON.parse(data)
-    let error = token && ( token.error || "" )
-    let parseError = token && ( token.parseError || "" )
-
-    if ( !response.ok ) {
-      errActions.newAuthErr( {
-        authId: name,
-        level: "error",
-        source: "auth",
-        message: response.statusText
-      } )
-      return
-    }
-
-    if ( error || parseError ) {
-      errActions.newAuthErr({
-        authId: name,
-        level: "error",
-        source: "auth",
-        message: JSON.stringify(token)
-      })
-      return
-    }
-
-    authActions.authorizeOauth2({ auth, token})
+    // authorize in all browsers
+    authorize(data)
   })
   .catch(e => {
     let err = new Error(e)
